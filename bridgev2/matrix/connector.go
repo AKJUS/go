@@ -138,23 +138,29 @@ func (br *Connector) Init(bridge *bridgev2.Bridge) {
 	for evtType := range status.CheckpointTypes {
 		br.EventProcessor.On(evtType, br.sendBridgeCheckpoint)
 	}
-	br.EventProcessor.On(event.EventMessage, br.handleRoomEvent)
-	br.EventProcessor.On(event.EventSticker, br.handleRoomEvent)
-	br.EventProcessor.On(event.EventUnstablePollStart, br.handleRoomEvent)
-	br.EventProcessor.On(event.EventUnstablePollResponse, br.handleRoomEvent)
-	br.EventProcessor.On(event.EventReaction, br.handleRoomEvent)
-	br.EventProcessor.On(event.EventRedaction, br.handleRoomEvent)
+	for _, evtType := range []event.Type{
+		event.EventMessage,
+		event.EventSticker,
+		event.EventUnstablePollStart,
+		event.EventUnstablePollResponse,
+		event.EventReaction,
+		event.EventRedaction,
+		event.StateMember,
+		event.StatePowerLevels,
+		event.StateRoomName,
+		event.BeeperSendState,
+		event.StateRoomAvatar,
+		event.StateTopic,
+		event.StateTombstone,
+		event.StateBeeperDisappearingTimer,
+		event.BeeperDeleteChat,
+		event.BeeperAcceptMessageRequest,
+		event.EphemeralEventReceipt,
+		event.EphemeralEventTyping,
+	} {
+		br.EventProcessor.On(evtType, br.handleRoomEvent)
+	}
 	br.EventProcessor.On(event.EventEncrypted, br.handleEncryptedEvent)
-	br.EventProcessor.On(event.StateMember, br.handleRoomEvent)
-	br.EventProcessor.On(event.StatePowerLevels, br.handleRoomEvent)
-	br.EventProcessor.On(event.StateRoomName, br.handleRoomEvent)
-	br.EventProcessor.On(event.BeeperSendState, br.handleRoomEvent)
-	br.EventProcessor.On(event.StateRoomAvatar, br.handleRoomEvent)
-	br.EventProcessor.On(event.StateTopic, br.handleRoomEvent)
-	br.EventProcessor.On(event.StateTombstone, br.handleRoomEvent)
-	br.EventProcessor.On(event.StateBeeperDisappearingTimer, br.handleRoomEvent)
-	br.EventProcessor.On(event.BeeperDeleteChat, br.handleRoomEvent)
-	br.EventProcessor.On(event.BeeperAcceptMessageRequest, br.handleRoomEvent)
 	br.EventProcessor.On(event.EphemeralEventReceipt, br.handleEphemeralEvent)
 	br.EventProcessor.On(event.EphemeralEventTyping, br.handleEphemeralEvent)
 	br.Bot = br.AS.BotIntent()
