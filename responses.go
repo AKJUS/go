@@ -448,6 +448,7 @@ type SyncJoinedRoom struct {
 	Timeline    SyncTimeline    `json:"timeline,omitzero"`
 	Ephemeral   SyncEventsList  `json:"ephemeral,omitzero"`
 	AccountData SyncEventsList  `json:"account_data,omitzero"`
+	Sticky      SyncEventsList  `json:"msc4354_sticky,omitzero"`
 
 	UnreadNotifications *UnreadNotificationCounts `json:"unread_notifications,omitempty"`
 	// https://github.com/matrix-org/matrix-spec-proposals/pull/2654
