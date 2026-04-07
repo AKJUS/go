@@ -31,12 +31,20 @@ func (br *Connector) handleRoomEvent(ctx context.Context, evt *event.Event) {
 		return
 	}
 	if !br.Config.Bridge.Permissions.Get(evt.Sender).SendEvents && evt.Type != event.StateMember {
-		zerolog.Ctx(ctx).Debug().Msg("Dropping event from user with no permission to send events")
+		zerolog.Ctx(ctx).Debug().
+			Stringer("room_id", evt.RoomID).
+			Stringer("sender", evt.Sender).
+			Stringer("event_id", evt.ID).
+			Msg("Dropping event from user with no permission to send events")
 		br.SendMessageStatus(ctx, &bridgev2.ErrNoPermissionToInteract, bridgev2.StatusEventInfoFromEvent(evt))
 		return
 	}
 	if (evt.Type == event.EventMessage || evt.Type == event.EventSticker) && !evt.Mautrix.WasEncrypted && br.Config.Encryption.Require {
-		zerolog.Ctx(ctx).Warn().Msg("Dropping unencrypted event as encryption is configured to be required")
+		zerolog.Ctx(ctx).Warn().
+			Stringer("room_id", evt.RoomID).
+			Stringer("sender", evt.Sender).
+			Stringer("event_id", evt.ID).
+			Msg("Dropping unencrypted event as encryption is configured to be required")
 		br.sendCryptoStatusError(ctx, evt, errMessageNotEncrypted, nil, 0, true)
 		return
 	}
