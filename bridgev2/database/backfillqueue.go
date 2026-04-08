@@ -146,7 +146,7 @@ func (btq *BackfillTaskQuery) GetNextForPortal(ctx context.Context, portalKey ne
 	task, err := btq.QueryOne(ctx, getNextBackfillQueryForPortal, btq.BridgeID, portalKey.ID, portalKey.Receiver)
 	if err != nil {
 		return nil, err
-	} else if !allowCompletedTask && (task.IsDone || task.UserLoginID == "") {
+	} else if !allowCompletedTask && (task == nil || task.IsDone || task.UserLoginID == "") {
 		return nil, nil
 	}
 	return task, nil
