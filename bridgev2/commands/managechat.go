@@ -81,7 +81,11 @@ func fnBridge(ce *Event) {
 			return
 		}
 	}
-	portal, login, ok := getCreatePortalInput(ce, ce.Bridge.Config.Relay.AllowBridge)
+	portal, login, ok := getCreatePortalInput(
+		ce,
+		ce.Bridge.Config.Relay.AllowBridge,
+		ce.Bridge.Config.Relay.PreferDefault && len(ce.Bridge.Config.Relay.DefaultRelays) > 0,
+	)
 	if !ok {
 		return
 	} else if portal.MXID != "" {
