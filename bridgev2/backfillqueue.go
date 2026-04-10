@@ -139,6 +139,7 @@ func (mt *ManualBackfill) Do(ctx context.Context) {
 		log.Warn().Msg("Backfill already in progress")
 		mt.Portal.backfillLock.Lock()
 	}
+	defer mt.Portal.backfillLock.Unlock()
 	defer func() {
 		if !completed {
 			if mt.DoneCallback != nil {
@@ -157,7 +158,6 @@ func (mt *ManualBackfill) Do(ctx context.Context) {
 			mt.Portal.nextBackfillDoneCallback(err)
 			mt.Portal.nextBackfillDoneCallback = nil
 		}
-		mt.Portal.backfillLock.Unlock()
 	}()
 	var task *database.BackfillTask
 	task, err = mt.Portal.Bridge.DB.BackfillTask.GetNextForPortal(ctx, mt.Portal.PortalKey, mt.Data != nil)
