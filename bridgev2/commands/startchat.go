@@ -183,10 +183,16 @@ func fnCreateGroup(ce *Event) {
 			if user, err := ce.Bridge.GetExistingUserByMXID(ce.Ctx, userID); err != nil {
 				ce.Log.Err(err).Stringer("user_id", userID).Msg("Failed to get user for room member")
 			} else if user != nil {
-				// TODO add user logins to participants
-				//for _, login := range user.GetUserLogins() {
-				//	params.Participants = append(params.Participants, login.GetUserID())
-				//}
+				for _, login := range user.GetUserLogins() {
+					nui, ok := login.Client.(bridgev2.NetworkAPIWithUserID)
+					if !ok {
+						continue
+					}
+					loginUserID := nui.GetUserID()
+					if loginUserID != "" && nui.IsLoggedIn() {
+						params.Participants = append(params.Participants, loginUserID)
+					}
+				}
 			}
 		}
 	}

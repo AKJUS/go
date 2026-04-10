@@ -413,6 +413,15 @@ type NetworkAPI interface {
 	HandleMatrixMessage(ctx context.Context, msg *MatrixMessage) (message *MatrixMessageResponse, err error)
 }
 
+// NetworkAPIWithUserID is an optional interface for fetching the remote user ID of the logged-in user.
+// Networks where such mapping is not possible should not implement this interface.
+// The GetUserID method may also return an empty string to indicate the user ID is not available.
+type NetworkAPIWithUserID interface {
+	NetworkAPI
+	// GetUserID returns the user ID of this client on the remote network.
+	GetUserID() networkid.UserID
+}
+
 type ConnectBackgroundParams struct {
 	// RawData is the raw data in the push that triggered the background connection.
 	RawData json.RawMessage
