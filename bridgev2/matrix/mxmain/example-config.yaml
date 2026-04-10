@@ -347,6 +347,7 @@ backfill:
     # Whether to do backfilling at all.
     enabled: false
     # Maximum number of messages to backfill in empty rooms.
+    # If this is zero or negative, backfill will be disabled in new rooms.
     max_initial_messages: 50
     # Maximum number of missed messages to backfill after bridge restarts.
     max_catchup_messages: 500
