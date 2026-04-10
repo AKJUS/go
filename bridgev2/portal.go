@@ -88,13 +88,15 @@ type Portal struct {
 
 	roomCreateLock   sync.Mutex
 	cancelRoomCreate atomic.Pointer[context.CancelFunc]
+	backgroundCtx    context.Context
+	cancelBackground context.CancelFunc
+	deleted          <-chan struct{}
 	RoomCreated      *exsync.Event
 
 	functionalMembersLock  sync.Mutex
 	functionalMembersCache *event.ElementFunctionalMembersContent
 
-	events  chan portalEvent
-	deleted *exsync.Event
+	events chan portalEvent
 
 	eventsLock sync.Mutex
 	eventIdx   int
@@ -131,8 +133,9 @@ func (br *Bridge) loadPortal(ctx context.Context, dbPortal *database.Portal, que
 		outgoingMessages:      make(map[networkid.TransactionID]*outgoingMessage),
 
 		RoomCreated: exsync.NewEvent(),
-		deleted:     exsync.NewEvent(),
 	}
+	portal.backgroundCtx, portal.cancelBackground = context.WithCancel(br.BackgroundCtx)
+	portal.deleted = portal.backgroundCtx.Done()
 	if portal.MXID != "" {
 		portal.RoomCreated.Set()
 	}
@@ -342,7 +345,7 @@ func (br *Bridge) GetExistingPortalByKey(ctx context.Context, key networkid.Port
 }
 
 func (portal *Portal) queueEvent(ctx context.Context, evt portalEvent) EventHandlingResult {
-	if portal.deleted.IsSet() {
+	if portal.backgroundCtx.Err() != nil {
 		return EventHandlingResultIgnored
 	}
 	if PortalEventBuffer == 0 {
@@ -357,7 +360,7 @@ func (portal *Portal) queueEvent(ctx context.Context, evt portalEvent) EventHand
 		select {
 		case portal.events <- evt:
 			return EventHandlingResultQueued
-		case <-portal.deleted.GetChan():
+		case <-portal.deleted:
 			return EventHandlingResultIgnored
 		default:
 			zerolog.Ctx(ctx).Error().
@@ -367,6 +370,8 @@ func (portal *Portal) queueEvent(ctx context.Context, evt portalEvent) EventHand
 				select {
 				case portal.events <- evt:
 					return EventHandlingResultQueued
+				case <-portal.deleted:
+					return EventHandlingResultIgnored
 				case <-time.After(5 * time.Second):
 					zerolog.Ctx(ctx).Error().
 						Str("portal_id", string(portal.ID)).
@@ -379,11 +384,10 @@ func (portal *Portal) queueEvent(ctx context.Context, evt portalEvent) EventHand
 
 func (portal *Portal) eventLoop() {
 	if cfg := portal.Bridge.Network.GetCapabilities().OutgoingMessageTimeouts; cfg != nil {
-		ctx, cancel := context.WithCancel(portal.Log.WithContext(portal.Bridge.BackgroundCtx))
+		ctx, cancel := context.WithCancel(portal.Log.WithContext(portal.backgroundCtx))
 		go portal.pendingMessageTimeoutLoop(ctx, cfg)
 		defer cancel()
 	}
-	deleteCh := portal.deleted.GetChan()
 	for i := 0; ; i++ {
 		select {
 		case rawEvt := <-portal.events:
@@ -395,7 +399,7 @@ func (portal *Portal) eventLoop() {
 			} else {
 				portal.handleSingleEventWithDelayLogging(i, rawEvt)
 			}
-		case <-deleteCh:
+		case <-portal.deleted:
 			return
 		}
 	}
@@ -413,6 +417,9 @@ func (portal *Portal) handleSingleEventWithDelayLogging(idx int, rawEvt any) (ou
 	// Note: this will assume success if the handler times out
 	outerRes = EventHandlingResult{Queued: true, Success: true, Error: ErrHandlerBackgrounded}
 	go portal.handleSingleEvent(ctx, rawEvt, func(res EventHandlingResult) {
+		if res.Error != nil && portal.backgroundCtx.Err() != nil {
+			res = EventHandlingResultIgnored
+		}
 		outerRes = res
 		handleDuration = time.Since(start)
 		close(doneCh)
@@ -486,7 +493,7 @@ func (portal *Portal) getEventCtxWithLog(rawEvt any, idx int) context.Context {
 				Stringer("event_id", evt.evt.ID).
 				Stringer("sender", evt.sender.MXID)
 		}
-		ctx := portal.Bridge.BackgroundCtx
+		ctx := portal.backgroundCtx
 		ctx = context.WithValue(ctx, contextKeyMatrixEvent, evt.evt)
 		ctx = logWith.Logger().WithContext(ctx)
 		return ctx
@@ -520,7 +527,7 @@ func (portal *Portal) getEventCtxWithLog(rawEvt any, idx int) context.Context {
 				logWith = logWith.Time("remote_timestamp", remoteTimestamp)
 			}
 		}
-		ctx := portal.Bridge.BackgroundCtx
+		ctx := portal.backgroundCtx
 		ctx = context.WithValue(ctx, contextKeyRemoteEvent, evt.evt)
 		ctx = logWith.Logger().WithContext(ctx)
 		if ctxMut, ok := evt.evt.(RemoteEventWithContextMutation); ok {
@@ -5042,13 +5049,15 @@ func (portal *Portal) CreateMatrixRoom(ctx context.Context, source *UserLogin, i
 		}
 		return nil
 	}
-	if portal.deleted.IsSet() {
+	if portal.backgroundCtx.Err() != nil {
 		return ErrPortalIsDeleted
 	}
+	mergedCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	waiter := make(chan struct{})
 	closed := false
 	evt := &portalCreateEvent{
-		ctx:    ctx,
+		ctx:    mergedCtx,
 		source: source,
 		info:   info,
 		cb: func(err error) {
@@ -5060,17 +5069,20 @@ func (portal *Portal) CreateMatrixRoom(ctx context.Context, source *UserLogin, i
 		},
 	}
 	if PortalEventBuffer == 0 {
-		go portal.queueEvent(ctx, evt)
+		go portal.queueEvent(mergedCtx, evt)
 	} else {
 		select {
 		case portal.events <- evt:
-		case <-portal.deleted.GetChan():
+		case <-portal.deleted:
 			return ErrPortalIsDeleted
 		}
 	}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-portal.deleted:
+		// This automatically cancels the merged context too
+		return ErrPortalIsDeleted
 	case <-waiter:
 		return
 	}
@@ -5088,6 +5100,9 @@ func (portal *Portal) createMatrixRoomInLoop(ctx context.Context, source *UserLo
 			source.MarkInPortal(ctx, portal)
 		}
 		return nil
+	}
+	if cancellableCtx.Err() != nil {
+		return cancellableCtx.Err()
 	}
 	log := zerolog.Ctx(ctx).With().
 		Str("action", "create matrix room").
@@ -5266,7 +5281,7 @@ func (portal *Portal) createMatrixRoomInLoop(ctx context.Context, source *UserLo
 		}
 		portal.Bridge.WakeupBackfillQueue()
 	}
-	withoutCancelCtx := zerolog.Ctx(ctx).WithContext(portal.Bridge.BackgroundCtx)
+	withoutCancelCtx := zerolog.Ctx(ctx).WithContext(portal.backgroundCtx)
 	if portal.Parent != nil {
 		if portal.Parent.MXID != "" {
 			portal.addToParentSpaceAndSave(ctx, true)
@@ -5307,7 +5322,7 @@ func (portal *Portal) addToUserSpaces(ctx context.Context) {
 		return
 	}
 	log := zerolog.Ctx(ctx)
-	withoutCancelCtx := log.WithContext(portal.Bridge.BackgroundCtx)
+	withoutCancelCtx := log.WithContext(portal.backgroundCtx)
 	if portal.Receiver != "" {
 		login := portal.Bridge.GetCachedUserLoginByID(portal.Receiver)
 		if login != nil {
@@ -5336,7 +5351,7 @@ func (portal *Portal) addToUserSpaces(ctx context.Context) {
 }
 
 func (portal *Portal) Delete(ctx context.Context) error {
-	if portal.deleted.IsSet() {
+	if portal.backgroundCtx.Err() != nil {
 		return nil
 	}
 	portal.removeInPortalCache(ctx)
@@ -5411,7 +5426,7 @@ func (portal *Portal) removeInPortalCache(ctx context.Context) {
 }
 
 func (portal *Portal) unlockedDelete(ctx context.Context) error {
-	if portal.deleted.IsSet() {
+	if portal.backgroundCtx.Err() != nil {
 		return nil
 	}
 	err := portal.safeDBDelete(ctx)
@@ -5423,14 +5438,14 @@ func (portal *Portal) unlockedDelete(ctx context.Context) error {
 }
 
 func (portal *Portal) unlockedDeleteCache() {
-	if portal.deleted.IsSet() {
+	if portal.backgroundCtx.Err() != nil {
 		return
 	}
 	delete(portal.Bridge.portalsByKey, portal.PortalKey)
 	if portal.MXID != "" {
 		delete(portal.Bridge.portalsByMXID, portal.MXID)
 	}
-	portal.deleted.Set()
+	portal.cancelBackground()
 	if portal.events != nil {
 		// TODO there's a small risk of this racing with a queueEvent call
 		close(portal.events)
