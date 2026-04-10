@@ -147,6 +147,9 @@ func getState[T any](ctx context.Context, roomID id.RoomID, evtType event.Type, 
 }
 
 func fnCreateGroup(ce *Event) {
+	if alreadyBridged(ce) {
+		return
+	}
 	login, api, remainingArgs := getClientForStartingChat[bridgev2.GroupCreatingNetworkAPI](ce, "creating group")
 	if api == nil {
 		return

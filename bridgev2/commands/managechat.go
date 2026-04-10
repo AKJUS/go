@@ -46,12 +46,23 @@ var CommandBridge = &FullHandler{
 	RequiresEventLevel: event.StateBridge,
 }
 
+func alreadyBridged(ce *Event) bool {
+	if ce.Portal != nil {
+		var receiver string
+		if ce.Portal.Receiver != "" {
+			receiver = fmt.Sprintf(" (receiver: %s)", format.SafeMarkdownCode(ce.Portal.Receiver))
+		}
+		ce.Reply("This room is already bridged to %s%s on %s", format.SafeMarkdownCode(ce.Portal.ID), receiver, ce.Bridge.Network.GetName().DisplayName)
+		return true
+	}
+	return false
+}
+
 func fnBridge(ce *Event) {
 	if !canPlumb(ce) {
 		ce.Reply("You don't have permission to bridge this room")
 		return
-	} else if ce.Portal != nil {
-		ce.Reply("This room is already bridged")
+	} else if alreadyBridged(ce) {
 		return
 	}
 	var allowOverwrite, ignorePermissions bool
