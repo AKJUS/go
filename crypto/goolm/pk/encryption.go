@@ -44,6 +44,8 @@ func (e Encryption) Encrypt(plaintext []byte, privateKey crypto.Curve25519Privat
 	if err != nil {
 		return nil, nil, err
 	}
-	mac, err = cipher.MAC(ciphertext)
+	// This is intentionally hashing an empty byte slice for bug compatibility:
+	// https://github.com/matrix-org/vodozemac/blob/0.9.0/src/pk_encryption.rs#L312-L314
+	mac, err = cipher.MAC([]byte{})
 	return ciphertext, goolmbase64.Encode(mac), err
 }

@@ -64,7 +64,9 @@ func (s Decryption) Decrypt(ephemeralKey, mac, ciphertext []byte) ([]byte, error
 		return nil, err
 	} else if cipher, err := aessha2.NewAESSHA2(sharedSecret, nil); err != nil {
 		return nil, err
-	} else if verified, err := cipher.VerifyMAC(ciphertext, decodedMAC, 8); err != nil {
+		// This is intentionally verifying an empty byte slice for bug compatibility:
+		// https://github.com/matrix-org/vodozemac/blob/0.9.0/src/pk_encryption.rs#L233-L234
+	} else if verified, err := cipher.VerifyMAC([]byte{}, decodedMAC, 8); err != nil {
 		return nil, err
 	} else if !verified {
 		return nil, fmt.Errorf("decrypt: %w", olm.ErrBadMAC)
