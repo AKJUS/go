@@ -69,7 +69,7 @@ func (mach *OlmMachine) ResolveTrustContext(ctx context.Context, device *id.Devi
 		return id.TrustStateUnset, err
 	}
 	if deviceSigExists {
-		if trusted, err := mach.IsUserTrusted(ctx, device.UserID); !trusted {
+		if trusted, err := mach.IsUserTrusted(ctx, device.UserID); trusted {
 			return id.TrustStateCrossSignedVerified, err
 		} else if theirMSK.Key == theirMSK.First {
 			return id.TrustStateCrossSignedTOFU, nil
