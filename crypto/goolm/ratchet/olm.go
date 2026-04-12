@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"slices"
 
 	"golang.org/x/crypto/hkdf"
 
@@ -62,6 +63,8 @@ type Ratchet struct {
 
 	// Storing the keys of missed messages for future use.
 	// The order of the elements is not important.
+	// TODO move this inside receiver chains to match vodozemac
+	// Due to being global, this is currently capped at a total of 40, instead of 5x40 like vodozemac
 	SkippedMessageKeys []skippedMessageKey `json:"skipped_message_keys"`
 }
 
@@ -80,6 +83,9 @@ func (r *Ratchet) InitializeAsBob(sharedSecret []byte, theirRatchetKey crypto.Cu
 	r.RootKey = derivedSecrets[0:sharedKeyLength]
 	newReceiverChain := newReceiverChain(derivedSecrets[sharedKeyLength:], theirRatchetKey)
 	r.ReceiverChains = append([]receiverChain{*newReceiverChain}, r.ReceiverChains...)
+	if len(r.ReceiverChains) > maxReceiverChains {
+		r.ReceiverChains = r.ReceiverChains[:maxReceiverChains]
+	}
 	return nil
 }
 
@@ -161,25 +167,28 @@ func (r *Ratchet) Decrypt(input []byte) ([]byte, error) {
 		// No need to advance the chain
 		// Chain already advanced beyond the key for this message
 		// Check if the message keys are in the skipped key list.
-		for curSkippedIndex := range r.SkippedMessageKeys {
-			if message.Counter != r.SkippedMessageKeys[curSkippedIndex].MKey.Index {
+		for idx, smk := range r.SkippedMessageKeys {
+			if message.Counter != smk.MKey.Index {
+				continue
+			}
+			// TODO this check will be unnecessary when skipped message keys are moved inside receiver chains
+			if !smk.RKey.Equal(message.RatchetKey) {
 				continue
 			}
 
 			// Found the key for this message. Check the MAC.
-			if cipher, err := aessha2.NewAESSHA2(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, olmKeysKDFInfo); err != nil {
+			if cipher, err := aessha2.NewAESSHA2(smk.MKey.Key, olmKeysKDFInfo); err != nil {
 				return nil, err
-			} else if verified, err := message.VerifyMACInline(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, cipher, input); err != nil {
+			} else if verified, err := message.VerifyMACInline(cipher, input); err != nil {
 				return nil, err
 			} else if !verified {
 				return nil, fmt.Errorf("decrypt from skipped message keys: %w", olm.ErrBadMAC)
 			} else if result, err := cipher.Decrypt(message.Ciphertext); err != nil {
 				return nil, fmt.Errorf("cipher decrypt: %w", err)
-			} else if len(result) != 0 {
+			} else {
 				// Remove the key from the skipped keys now that we've
 				// decoded the message it corresponds to.
-				r.SkippedMessageKeys[curSkippedIndex] = r.SkippedMessageKeys[len(r.SkippedMessageKeys)-1]
-				r.SkippedMessageKeys = r.SkippedMessageKeys[:len(r.SkippedMessageKeys)-1]
+				r.SkippedMessageKeys = slices.Delete(r.SkippedMessageKeys, idx, idx+1)
 				return result, nil
 			}
 		}
@@ -233,13 +242,16 @@ func (r *Ratchet) decryptForExistingChain(chain *receiverChain, message *message
 		r.SkippedMessageKeys = append(r.SkippedMessageKeys, skippedKey)
 		chain.advance()
 	}
+	if len(r.SkippedMessageKeys) > maxSkippedMessageKeys {
+		r.SkippedMessageKeys = r.SkippedMessageKeys[len(r.SkippedMessageKeys)-maxSkippedMessageKeys:]
+	}
 	messageKey := r.createMessageKeys(chain.chainKey())
 	chain.advance()
 	cipher, err := aessha2.NewAESSHA2(messageKey.Key, olmKeysKDFInfo)
 	if err != nil {
 		return nil, err
 	}
-	verified, err := message.VerifyMACInline(messageKey.Key, cipher, rawMessage)
+	verified, err := message.VerifyMACInline(cipher, rawMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -267,6 +279,9 @@ func (r *Ratchet) decryptForNewChain(message *message.Message, rawMessage []byte
 	}
 	newChain := newReceiverChain(newChainKey, message.RatchetKey)
 	r.ReceiverChains = append([]receiverChain{*newChain}, r.ReceiverChains...)
+	if len(r.ReceiverChains) > maxReceiverChains {
+		r.ReceiverChains = r.ReceiverChains[:maxReceiverChains]
+	}
 	/*
 		They have started using a new ephemeral ratchet key.
 		We needed to derive a new set of chain keys.

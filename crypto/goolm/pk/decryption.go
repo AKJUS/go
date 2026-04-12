@@ -64,7 +64,7 @@ func (s Decryption) Decrypt(ephemeralKey, mac, ciphertext []byte) ([]byte, error
 		return nil, err
 	} else if cipher, err := aessha2.NewAESSHA2(sharedSecret, nil); err != nil {
 		return nil, err
-	} else if verified, err := cipher.VerifyMAC(ciphertext, decodedMAC); err != nil {
+	} else if verified, err := cipher.VerifyMAC(ciphertext, decodedMAC, 8); err != nil {
 		return nil, err
 	} else if !verified {
 		return nil, fmt.Errorf("decrypt: %w", olm.ErrBadMAC)
