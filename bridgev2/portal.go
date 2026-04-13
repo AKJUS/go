@@ -778,6 +778,9 @@ func (portal *Portal) handleMatrixEvent(ctx context.Context, sender *User, evt *
 			User:   sender,
 			UserID: sender.MXID,
 		}
+		log.UpdateContext(func(c zerolog.Context) zerolog.Context {
+			return c.Bool("is_relay", true)
+		})
 
 		memberInfo, err := portal.Bridge.Matrix.GetMemberInfo(ctx, portal.MXID, sender.MXID)
 		if err != nil {
