@@ -104,6 +104,7 @@ type Portal struct {
 	eventIdx   int
 
 	backfillLock             sync.Mutex
+	forwardBackfillLock      sync.Mutex
 	nextBackfillDoneCallback func(error)
 }
 

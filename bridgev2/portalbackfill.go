@@ -25,6 +25,11 @@ import (
 
 func (portal *Portal) doForwardBackfill(ctx context.Context, source *UserLogin, lastMessage *database.Message, bundledData any) {
 	log := zerolog.Ctx(ctx).With().Str("action", "forward backfill").Logger()
+	if !portal.forwardBackfillLock.TryLock() {
+		log.Warn().Msg("Another forward backfill is already running")
+		return
+	}
+	defer portal.forwardBackfillLock.Unlock()
 	ctx = log.WithContext(ctx)
 	api, ok := source.Client.(BackfillingNetworkAPI)
 	if !ok {
