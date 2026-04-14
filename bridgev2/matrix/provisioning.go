@@ -714,21 +714,26 @@ func (prov *ProvisioningAPI) PostPaginate(w http.ResponseWriter, r *http.Request
 		mautrix.MUnrecognized.WithMessage("Manual backfill is not enabled").Write(w)
 		return
 	}
+	log := zerolog.Ctx(r.Context())
 	login := prov.GetLoginForRequest(w, r)
 	if login == nil {
 		return
 	}
-	portal, err := prov.br.Bridge.GetPortalByMXID(r.Context(), id.RoomID(r.PathValue("roomID")))
+	targetRoomID := id.RoomID(r.PathValue("roomID"))
+	portal, err := prov.br.Bridge.GetPortalByMXID(r.Context(), targetRoomID)
 	if err != nil {
+		log.Err(err).Msg("Failed to get portal for pagination")
 		RespondWithError(w, err, "Internal error getting portal")
 	} else if portal == nil {
+		log.Debug().Stringer("target_room_id", targetRoomID).Msg("Paginate requested for unknown portal room")
 		mautrix.MNotFound.WithMessage("Portal not found").Write(w)
 	} else if task, err := prov.br.Bridge.DB.BackfillTask.GetNextForPortal(r.Context(), portal.PortalKey, false); err != nil {
+		log.Err(err).Msg("Failed to get backfill task for portal")
 		RespondWithError(w, err, "Internal error getting backfill task")
 	} else if task == nil {
+		log.Debug().Msg("No backfill task found for portal")
 		w.WriteHeader(http.StatusNoContent)
 	} else {
-		log := zerolog.Ctx(r.Context())
 		log.Info().
 			Object("portal_key", portal.PortalKey).
 			Any("current_backfill_task", task).
