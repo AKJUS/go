@@ -9,6 +9,7 @@ package crypto
 
 import (
 	"context"
+	"fmt"
 
 	"maunium.net/go/mautrix/id"
 )
@@ -96,8 +97,10 @@ func (mach *OlmMachine) IsDeviceTrusted(ctx context.Context, device *id.Device) 
 // IsUserTrusted returns whether a user has been determined to be trusted by our user-signing key having signed their master key.
 // In the case the user ID is our own and we have successfully retrieved our cross-signing keys, we trust our own user.
 func (mach *OlmMachine) IsUserTrusted(ctx context.Context, userID id.UserID) (bool, error) {
-	csPubkeys := mach.GetOwnCrossSigningPublicKeys(ctx)
-	if csPubkeys == nil {
+	csPubkeys, err := mach.GetOwnCrossSigningPublicKeys(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get own cross-signing public keys: %w", err)
+	} else if csPubkeys == nil {
 		return false, nil
 	}
 	if userID == mach.Client.UserID {
