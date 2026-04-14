@@ -22,13 +22,13 @@ import (
 // KeyMetadata represents server-side metadata about a SSSS key. The metadata can be used to get
 // the actual SSSS key from a passphrase or recovery key.
 type KeyMetadata struct {
-	Name      string    `json:"name"`
+	Name      string    `json:"name,omitempty"`
 	Algorithm Algorithm `json:"algorithm"`
 
 	// Note: as per https://spec.matrix.org/v1.9/client-server-api/#msecret_storagev1aes-hmac-sha2,
 	// these fields are "maybe padded" base64, so both unpadded and padded values must be supported.
-	IV  string `json:"iv"`
-	MAC string `json:"mac"`
+	IV  string `json:"iv,omitempty"`
+	MAC string `json:"mac,omitempty"`
 
 	Passphrase *PassphraseMetadata `json:"passphrase,omitempty"`
 }
