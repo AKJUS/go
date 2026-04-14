@@ -31,20 +31,18 @@ func (portal *Portal) doForwardBackfill(ctx context.Context, source *UserLogin, 
 		log.Debug().Msg("Network API does not support backfilling")
 		return
 	}
-	logEvt := log.Info()
 	var limit int
+	var latestMessageID string
 	if lastMessage != nil {
-		logEvt = logEvt.Str("latest_message_id", string(lastMessage.ID))
+		latestMessageID = string(lastMessage.ID)
 		limit = portal.Bridge.Config.Backfill.MaxCatchupMessages
 	} else {
-		logEvt = logEvt.Str("latest_message_id", "")
 		limit = portal.Bridge.Config.Backfill.MaxInitialMessages
 	}
 	if limit <= 0 {
-		logEvt.Discard().Send()
 		return
 	}
-	logEvt.Msg("Fetching messages for forward backfill")
+	log.Info().Str("latest_message_id", latestMessageID).Msg("Fetching messages for forward backfill")
 	resp, err := api.FetchMessages(ctx, FetchMessagesParams{
 		Portal:        portal,
 		ThreadRoot:    "",
@@ -70,6 +68,7 @@ func (portal *Portal) doForwardBackfill(ctx context.Context, source *UserLogin, 
 		Int("message_count", len(resp.Messages)).
 		Bool("mark_read", resp.MarkRead).
 		Bool("aggressive_deduplication", resp.AggressiveDeduplication).
+		Str("queried_latest_message_id", latestMessageID).
 		Msg("Fetched messages for forward backfill, deduplicating before sending")
 	// TODO mark backfill queue task as done if last message is nil (-> room was empty) and HasMore is false?
 	resp.Messages = portal.cutoffMessages(ctx, resp.Messages, resp.AggressiveDeduplication, true, lastMessage)
@@ -322,7 +321,7 @@ func (portal *Portal) sendBackfill(
 	if canBatchSend {
 		err = portal.sendBatch(ctx, source, messages, forceForward, markRead || forceMarkRead, inThread)
 	} else {
-		portal.sendLegacyBackfill(ctx, source, messages, markRead || forceMarkRead)
+		err = portal.sendLegacyBackfill(ctx, source, messages, markRead || forceMarkRead)
 	}
 	if err != nil {
 		return err
@@ -564,22 +563,31 @@ func (portal *Portal) sendBatch(ctx context.Context, source *UserLogin, messages
 	return nil
 }
 
-func (portal *Portal) sendLegacyBackfill(ctx context.Context, source *UserLogin, messages []*BackfillMessage, markRead bool) {
+func (portal *Portal) sendLegacyBackfill(ctx context.Context, source *UserLogin, messages []*BackfillMessage, markRead bool) error {
 	var lastPart id.EventID
 	for _, msg := range messages {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		intent, ok := portal.GetIntentFor(ctx, msg.Sender, source, RemoteEventMessage)
 		if !ok {
 			continue
 		}
-		dbMessages, _ := portal.sendConvertedMessage(ctx, msg.ID, intent, msg.Sender.Sender, msg.ConvertedMessage, msg.Timestamp, msg.StreamOrder, func(z *zerolog.Event) *zerolog.Event {
+		dbMessages, res := portal.sendConvertedMessage(ctx, msg.ID, intent, msg.Sender.Sender, msg.ConvertedMessage, msg.Timestamp, msg.StreamOrder, func(z *zerolog.Event) *zerolog.Event {
 			return z.
 				Str("message_id", string(msg.ID)).
 				Any("sender_id", msg.Sender).
 				Time("message_ts", msg.Timestamp)
 		})
+		if !res.Success {
+			return res.Error
+		}
 		if len(dbMessages) > 0 {
 			lastPart = dbMessages[len(dbMessages)-1].MXID
 			for _, reaction := range msg.Reactions {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 				reactionIntent, ok := portal.GetIntentFor(ctx, reaction.Sender, source, RemoteEventReaction)
 				if !ok {
 					continue
@@ -618,4 +626,5 @@ func (portal *Portal) sendLegacyBackfill(ctx context.Context, source *UserLogin,
 			}
 		}
 	}
+	return nil
 }

@@ -12,10 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/rs/zerolog"
 	"go.mau.fi/util/exfmt"
@@ -177,7 +179,8 @@ func (br *Bridge) loadPortal(ctx context.Context, dbPortal *database.Portal, que
 func (portal *Portal) updateLogger() {
 	logWith := portal.Bridge.Log.With().
 		Str("portal_id", string(portal.ID)).
-		Str("portal_receiver", string(portal.Receiver))
+		Str("portal_receiver", string(portal.Receiver)).
+		Str("portal_pointer", strconv.FormatUint(uint64(uintptr(unsafe.Pointer(portal))), 16))
 	if portal.MXID != "" {
 		logWith = logWith.Stringer("portal_mxid", portal.MXID)
 	}
@@ -2849,6 +2852,10 @@ func (portal *Portal) sendConvertedMessage(
 	output := make([]*database.Message, 0, len(converted.Parts))
 	var errorList []error
 	for i, part := range converted.Parts {
+		if ctx.Err() != nil {
+			errorList = append(errorList, ctx.Err())
+			break
+		}
 		portal.applyRelationMeta(ctx, part.Content, replyTo, threadRoot, prevThreadEvent)
 		part.Content.BeeperDisappearingTimer = converted.Disappear.ToEventContent()
 		dbMessage := &database.Message{
