@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.mau.fi/util/random"
+
 	"maunium.net/go/mautrix/crypto/utils"
 )
 
@@ -126,6 +128,15 @@ type PassphraseMetadata struct {
 	Iterations int                 `json:"iterations"`
 	Salt       string              `json:"salt"`
 	Bits       int                 `json:"bits"`
+}
+
+func NewPassphraseMetadata() *PassphraseMetadata {
+	return &PassphraseMetadata{
+		Algorithm:  PassphraseAlgorithmPBKDF2,
+		Iterations: 500000,
+		Salt:       base64.StdEncoding.EncodeToString(random.Bytes(24)),
+		Bits:       256,
+	}
 }
 
 // GetKey gets the SSSS key from the passphrase.
