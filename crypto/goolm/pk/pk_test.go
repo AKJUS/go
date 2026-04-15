@@ -1,6 +1,7 @@
 package pk_test
 
 import (
+	"crypto/ed25519"
 	"encoding/base64"
 	"testing"
 
@@ -34,4 +35,20 @@ func TestSigning(t *testing.T) {
 	copy(signatureDecoded[0:], []byte("m"))
 	verified = pubKey.Verify(message, signatureDecoded)
 	assert.False(t, verified, "signature verified with wrong message")
+}
+
+func TestStrictVerifyRejectsSmallOrderKey(t *testing.T) {
+	message := []byte("test message for small-order key check")
+
+	pubKey := make(crypto.Ed25519PublicKey, 32)
+	pubKey[0] = 0x01
+
+	signature := make([]byte, 64)
+	signature[0] = 0x01
+
+	assert.True(t, ed25519.Verify(ed25519.PublicKey(pubKey), message, signature),
+		"standard library accepts small-order keys")
+
+	assert.False(t, pubKey.Verify(message, signature),
+		"strict verify rejects small-order keys")
 }
