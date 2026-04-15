@@ -109,6 +109,8 @@ type Portal struct {
 }
 
 var PortalEventBuffer = 64
+var PanicOnStuckEvent = false
+var EventHandlingTimeoutTicks = 10
 
 func (br *Bridge) loadPortal(ctx context.Context, dbPortal *database.Portal, queryErr error, key *networkid.PortalKey) (*Portal, error) {
 	if queryErr != nil {
@@ -409,8 +411,6 @@ func (portal *Portal) eventLoop() {
 	}
 }
 
-var PanicOnStuckEvent = false
-
 func (portal *Portal) handleSingleEventWithDelayLogging(idx int, rawEvt any) (outerRes EventHandlingResult) {
 	ctx := portal.getEventCtxWithLog(rawEvt, idx)
 	log := zerolog.Ctx(ctx)
@@ -437,7 +437,7 @@ func (portal *Portal) handleSingleEventWithDelayLogging(idx int, rawEvt any) (ou
 	tick := time.NewTicker(30 * time.Second)
 	_, isCreate := rawEvt.(*portalCreateEvent)
 	defer tick.Stop()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < EventHandlingTimeoutTicks; i++ {
 		select {
 		case <-doneCh:
 			if i > 0 {

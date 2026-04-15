@@ -175,6 +175,7 @@ func (br *BridgeMain) PreInit() {
 		br.GenerateRegistration()
 		os.Exit(0)
 	}
+	LoadGlobalConfigEnv()
 }
 
 func (br *BridgeMain) GenerateRegistration() {
