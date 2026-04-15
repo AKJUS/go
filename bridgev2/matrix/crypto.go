@@ -352,8 +352,7 @@ func (helper *CryptoHelper) verifyKeysAreOnServer(ctx context.Context) (bool, er
 		return true, nil
 	}
 	helper.log.Warn().Msg("Existing device doesn't have keys on server, resetting crypto")
-	helper.Reset(ctx, false)
-	return false, nil
+	return false, helper.Reset(ctx, false)
 }
 
 func (helper *CryptoHelper) Start() {
@@ -417,7 +416,7 @@ func (helper *CryptoHelper) clearDatabase(ctx context.Context) {
 	//_, _ = helper.store.DB.Exec("DELETE FROM crypto_cross_signing_signatures")
 }
 
-func (helper *CryptoHelper) Reset(ctx context.Context, startAfterReset bool) {
+func (helper *CryptoHelper) Reset(ctx context.Context, startAfterReset bool) error {
 	helper.lock.Lock()
 	defer helper.lock.Unlock()
 	helper.log.Info().Msg("Resetting end-to-bridge encryption device")
@@ -435,12 +434,13 @@ func (helper *CryptoHelper) Reset(ctx context.Context, startAfterReset bool) {
 	err = helper.Init(ctx)
 	if err != nil {
 		helper.log.WithLevel(zerolog.FatalLevel).Err(err).Msg("Error reinitializing end-to-bridge encryption")
-		os.Exit(50)
+		return ExitError{50}
 	}
 	helper.log.Info().Msg("End-to-bridge encryption successfully reset")
 	if startAfterReset {
 		go helper.Start()
 	}
+	return nil
 }
 
 func (helper *CryptoHelper) Client() *mautrix.Client {

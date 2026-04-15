@@ -53,7 +53,7 @@ type Crypto interface {
 	Init(ctx context.Context) error
 	Start()
 	Stop()
-	Reset(ctx context.Context, startAfterReset bool)
+	Reset(ctx context.Context, startAfterReset bool) error
 	Client() *mautrix.Client
 	ShareKeys(context.Context) error
 	BeeperStreamPublisher() bridgev2.BeeperStreamPublisher
