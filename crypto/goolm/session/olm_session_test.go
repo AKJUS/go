@@ -46,7 +46,7 @@ func TestOlmSession(t *testing.T) {
 	assert.Equal(t, plaintext, decryptedMsg)
 
 	// Alice pickles session
-	pickled, err := aliceSession.PickleAsJSON(pickleKey)
+	pickled, err := aliceSession.Pickle(pickleKey)
 	assert.NoError(t, err)
 
 	//bob sends a message
@@ -56,7 +56,7 @@ func TestOlmSession(t *testing.T) {
 	assert.Equal(t, id.OlmMsgTypeMsg, msgType)
 
 	//Alice unpickles session
-	newAliceSession, err := session.OlmSessionFromJSONPickled(pickled, pickleKey)
+	newAliceSession, err := session.OlmSessionFromPickled(pickled, pickleKey)
 	assert.NoError(t, err)
 
 	//Alice receives message

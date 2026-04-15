@@ -38,16 +38,6 @@ var _ olm.Session = (*OlmSession)(nil)
 // SearchOTKFunc is used to retrieve a crypto.OneTimeKey from a public key.
 type SearchOTKFunc = func(crypto.Curve25519PublicKey) *crypto.OneTimeKey
 
-// OlmSessionFromJSONPickled loads an OlmSession from a pickled base64 string. Decrypts
-// the Session using the supplied key.
-func OlmSessionFromJSONPickled(pickled, key []byte) (*OlmSession, error) {
-	if len(pickled) == 0 {
-		return nil, fmt.Errorf("sessionFromPickled: %w", olm.ErrEmptyInput)
-	}
-	a := &OlmSession{}
-	return a, a.UnpickleAsJSON(pickled, key)
-}
-
 // OlmSessionFromPickled loads the OlmSession details from a pickled base64 string. The input is decrypted with the supplied key.
 func OlmSessionFromPickled(pickled, key []byte) (*OlmSession, error) {
 	if len(pickled) == 0 {
@@ -182,16 +172,6 @@ func NewInboundOlmSession(identityKeyAlice *crypto.Curve25519PublicKey, received
 	//https://gitlab.matrix.org/matrix-org/olm/blob/master/docs/olm.md states to remove the oneTimeKey
 	//this is done via the account itself
 	return s, nil
-}
-
-// PickleAsJSON returns an Session as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (a OlmSession) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(a, olmSessionPickleVersionJSON, key)
-}
-
-// UnpickleAsJSON updates an Session by a base64 encrypted string with the key. The unencrypted representation has to be in JSON format.
-func (a *OlmSession) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(a, pickled, key, olmSessionPickleVersionJSON)
 }
 
 // ID returns an identifier for this Session.  Will be the same for both ends of the conversation.

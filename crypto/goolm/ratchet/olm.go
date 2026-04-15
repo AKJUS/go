@@ -17,10 +17,6 @@ import (
 )
 
 const (
-	olmPickleVersion uint8 = 1
-)
-
-const (
 	maxReceiverChains     = 5
 	maxSkippedMessageKeys = 40
 	protocolVersion       = 3
@@ -309,16 +305,6 @@ func (r *Ratchet) decryptForNewChain(message *message.Message, rawMessage []byte
 		r.SkippedMessageKeys = r.SkippedMessageKeys[len(r.SkippedMessageKeys)-maxSkippedMessageKeys:]
 	}
 	return decrypted, nil
-}
-
-// PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (r Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(r, olmPickleVersion, key)
-}
-
-// UnpickleAsJSON updates a ratchet by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (r *Ratchet) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(r, pickled, key, olmPickleVersion)
 }
 
 // UnpickleLibOlm unpickles the unencryted value and populates the [Ratchet]

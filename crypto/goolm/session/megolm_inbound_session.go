@@ -159,16 +159,6 @@ func (o *MegolmInboundSession) ID() id.SessionID {
 	return id.SessionID(base64.RawStdEncoding.EncodeToString(o.SigningKey))
 }
 
-// PickleAsJSON returns an MegolmInboundSession as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (o *MegolmInboundSession) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(o, megolmInboundSessionPickleVersionJSON, key)
-}
-
-// UnpickleAsJSON updates an MegolmInboundSession by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (o *MegolmInboundSession) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(o, pickled, key, megolmInboundSessionPickleVersionJSON)
-}
-
 // Export returns the base64-encoded ratchet key for this session, at the given
 // index, in a format which can be used by
 // InboundGroupSession.InboundGroupSessionImport().  Encrypts the

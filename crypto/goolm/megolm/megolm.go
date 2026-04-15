@@ -16,10 +16,6 @@ import (
 )
 
 const (
-	megolmPickleVersion uint8 = 1
-)
-
-const (
 	protocolVersion   = 3
 	RatchetParts      = 4       // number of ratchet parts
 	RatchetPartLength = 256 / 8 // length of each ratchet part in bytes
@@ -192,16 +188,6 @@ func (r Ratchet) Decrypt(ciphertext []byte, msg *message.GroupMessage) ([]byte, 
 	}
 
 	return cipher.Decrypt(msg.Ciphertext)
-}
-
-// PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (r Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(r, megolmPickleVersion, key)
-}
-
-// UnpickleAsJSON updates a ratchet by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (r *Ratchet) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(r, pickled, key, megolmPickleVersion)
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the Ratchet accordingly. It returns the number of bytes read.

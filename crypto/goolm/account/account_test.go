@@ -23,11 +23,11 @@ func TestAccount(t *testing.T) {
 	encryptionKey := []byte("testkey")
 
 	//now pickle account in JSON format
-	pickled, err := firstAccount.PickleAsJSON(encryptionKey)
+	pickled, err := firstAccount.Pickle(encryptionKey)
 	assert.NoError(t, err)
 
 	//now unpickle into new Account
-	unpickledAccount, err := account.AccountFromJSONPickled(pickled, encryptionKey)
+	unpickledAccount, err := account.AccountFromPickled(pickled, encryptionKey)
 	assert.NoError(t, err)
 
 	//check if accounts are the same
@@ -56,20 +56,19 @@ func TestAccount(t *testing.T) {
 func TestAccountPickleJSON(t *testing.T) {
 	key := []byte("test key")
 
+	// Generating new values when struct changed
 	/*
-		// Generating new values when struct changed
-		newAccount, _ := NewAccount()
-		pickled, _ := newAccount.PickleAsJSON(key)
+		newAccount, _ := account.NewAccount()
+		pickled, _ := newAccount.Pickle(key)
 		fmt.Println(string(pickled))
 		jsonDataNew, _ := newAccount.IdentityKeysJSON()
 		fmt.Println(string(jsonDataNew))
-		return
 	*/
 
-	pickledData := []byte("6POkBWwbNl20fwvZWsOu0jgbHy4jkA5h0Ji+XCag59+ifWIRPDrqtgQi9HmkLiSF6wUhhYaV4S73WM+Hh+dlCuZRuXhTQr8yGPTifjcjq8birdAhObbEqHrYEdqaQkrgBLr/rlS5sibXeDqbkhVu4LslvootU9DkcCbd4b/0Flh7iugxqkcCs5GDndTEx9IzTVJzmK82Y0Q1Z1Z9Vuc2Iw746PtBJLtZjite6fSMp2NigPX/ZWWJ3OnwcJo0Vvjy8hgptZEWkamOHdWbUtelbHyjDIZlvxOC25D3rFif0zzPkF9qdpBPqVCWPPzGFmgnqKau6CHrnPfq7GLsM3BrprD7sHN1Js28ex14gXQPjBT7KTUo6H0e4gQMTMRp4qb8btNXDeId8xIFIElTh2SXZBTDmSq/ziVNJinEvYV8mGPvJZjDQQU+SyoS/HZ8uMc41tH0BOGDbFMHbfLMiz61E429gOrx2klu5lqyoyet7//HKi0ed5w2dQ")
-	account, err := account.AccountFromJSONPickled(pickledData, key)
+	pickledData := []byte("RLlGsxqzjwMQDVS/ZUXHUwXVSdPXB5SE82erFmwvUN0appArMAIqgsscMhE2yRULGe16vlGvP9xrSOI+fjWi69PzoQAv5VhoZj/3PRgPOTLRX1f+covGNZCMEzkcfjszi1zWvryk5UGQS2Nw3M7b8uYuTKJ+2wG4YO7EjpF3aPlS/RjHjnQT+jefjjM4GzcZddP6xgrKiCmJKuJcTkJKFK5VcyiT7Tt7EiUsViJnWgdwM3RWiDVk3w")
+	account, err := account.AccountFromPickled(pickledData, key)
 	assert.NoError(t, err)
-	expectedJSON := `{"ed25519":"qWvNB6Ztov5/AOsP073op0O32KJ8/tgSNarT7MaYgQE","curve25519":"TFUB6M6zwgyWhBEp2m1aUodl2AsnsrIuBr8l9AvwGS8"}`
+	expectedJSON := `{"ed25519":"QtURQr6XjRqmpwscm107OIcVvLrZY8CXUnt+O6DJR38","curve25519":"n2cLWJYguFz/xBaHTWcpY8WrEByVTcns/OoxaKOMgT0"}`
 	jsonData, err := account.IdentityKeysJSON()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedJSON, string(jsonData))

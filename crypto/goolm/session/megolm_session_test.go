@@ -13,25 +13,25 @@ import (
 	"maunium.net/go/mautrix/crypto/olm"
 )
 
-func TestOutboundPickleJSON(t *testing.T) {
+func TestOutboundPickleRoundtrip(t *testing.T) {
 	pickleKey := []byte("secretKey")
 	sess, err := session.NewMegolmOutboundSession()
 	assert.NoError(t, err)
 	kp, err := crypto.Ed25519GenerateKey()
 	assert.NoError(t, err)
 	sess.SigningKey = kp
-	pickled, err := sess.PickleAsJSON(pickleKey)
+	pickled, err := sess.Pickle(pickleKey)
 	assert.NoError(t, err)
 
 	newSession := session.MegolmOutboundSession{}
-	err = newSession.UnpickleAsJSON(pickled, pickleKey)
+	err = newSession.Unpickle(pickled, pickleKey)
 	assert.NoError(t, err)
 	assert.Equal(t, sess.ID(), newSession.ID())
 	assert.Equal(t, sess.SigningKey, newSession.SigningKey)
 	assert.Equal(t, sess.Ratchet, newSession.Ratchet)
 }
 
-func TestInboundPickleJSON(t *testing.T) {
+func TestInboundPickleRoundtrip(t *testing.T) {
 	pickleKey := []byte("secretKey")
 	sess := session.MegolmInboundSession{}
 	kp, err := crypto.Ed25519GenerateKey()
@@ -43,11 +43,11 @@ func TestInboundPickleJSON(t *testing.T) {
 	ratchet, err := megolm.New(0, randomData)
 	assert.NoError(t, err)
 	sess.Ratchet = *ratchet
-	pickled, err := sess.PickleAsJSON(pickleKey)
+	pickled, err := sess.Pickle(pickleKey)
 	assert.NoError(t, err)
 
 	newSession := session.MegolmInboundSession{}
-	err = newSession.UnpickleAsJSON(pickled, pickleKey)
+	err = newSession.Unpickle(pickled, pickleKey)
 	assert.NoError(t, err)
 	assert.Equal(t, sess.ID(), newSession.ID())
 	assert.Equal(t, sess.SigningKey, newSession.SigningKey)
