@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 
@@ -23,6 +24,7 @@ func TestPKCS7(t *testing.T) {
 		expected []byte
 	}{
 		{[]byte("test"), 4, []byte("test\x04\x04\x04\x04")},
+		{make([]byte, 1, 4), 4, []byte("\x00\x03\x03\x03")},
 		{[]byte("test"), 8, []byte("test\x04\x04\x04\x04")},
 		{[]byte("test1"), 8, []byte("test1\x03\x03\x03")},
 		{bytes.Repeat([]byte("test1"), 6), aes.BlockSize, append(bytes.Repeat([]byte("test1"), 6), 0x02, 0x02)},
@@ -31,6 +33,8 @@ func TestPKCS7(t *testing.T) {
 		t.Run(string(tc.input), func(t *testing.T) {
 			// Test pad
 			padded := pkcs7.Pad(tc.input, tc.blockLen)
+			assert.NotEqual(t, unsafe.Pointer(&tc.input[0]), unsafe.Pointer(&padded[0]),
+				"Pad should return a new slice, not modify the input")
 			assert.Equal(t, tc.expected, padded)
 			assert.Zero(t, len(padded)%tc.blockLen, "padded length is not a multiple of block size")
 

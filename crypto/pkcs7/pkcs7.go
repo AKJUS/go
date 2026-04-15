@@ -1,4 +1,5 @@
 // Copyright (c) 2024 Sumner Evans
+// Copyright (c) 2026 Tulir Asokan
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -7,7 +8,6 @@
 package pkcs7
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 )
@@ -19,7 +19,12 @@ import (
 // [RFC2315]: https://www.ietf.org/rfc/rfc2315.txt
 func Pad(data []byte, blockSize int) []byte {
 	padding := blockSize - len(data)%blockSize
-	return append(data, bytes.Repeat([]byte{byte(padding)}, padding)...)
+	output := make([]byte, len(data)+padding)
+	copy(output, data)
+	for i := len(data); i < len(output); i++ {
+		output[i] = byte(padding)
+	}
+	return output
 }
 
 var (

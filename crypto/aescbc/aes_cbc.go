@@ -15,8 +15,6 @@ import (
 
 // Encrypt encrypts the plaintext with the key and IV. The IV length must be
 // equal to the AES block size.
-//
-// This function might mutate the plaintext.
 func Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, ErrNoKeyProvided
@@ -24,6 +22,7 @@ func Encrypt(key, iv, plaintext []byte) ([]byte, error) {
 	if len(iv) != aes.BlockSize {
 		return nil, ErrIVNotBlockSize
 	}
+	// This will copy the input to ensure the CryptBlocks doesn't mutate it later
 	plaintext = pkcs7.Pad(plaintext, aes.BlockSize)
 
 	block, err := aes.NewCipher(key)
