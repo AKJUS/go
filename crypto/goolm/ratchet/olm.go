@@ -149,7 +149,7 @@ func (r *Ratchet) Decrypt(input []byte) ([]byte, error) {
 	if message.Version != protocolVersion {
 		return nil, fmt.Errorf("decrypt: %w (got %d, expected %d)", olm.ErrWrongProtocolVersion, message.Version, protocolVersion)
 	}
-	if !message.HasCounter || len(message.RatchetKey) == 0 || len(message.Ciphertext) == 0 {
+	if !message.HasCounter || len(message.RatchetKey) != crypto.Curve25519PublicKeyLength || len(message.Ciphertext) == 0 {
 		return nil, fmt.Errorf("decrypt: %w", olm.ErrBadMessageFormat)
 	}
 	var receiverChainFromMessage *receiverChain

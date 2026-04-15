@@ -64,6 +64,8 @@ func (r *GroupMessage) Decode(input []byte) (err error) {
 			} else if curKey == cipherTextTag {
 				r.Ciphertext = value
 			}
+		} else {
+			return fmt.Errorf("GroupMessage.Decode: unexpected proto key %d", curKey)
 		}
 	}
 }

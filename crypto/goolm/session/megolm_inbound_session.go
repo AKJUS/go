@@ -145,7 +145,7 @@ func (o *MegolmInboundSession) Decrypt(ciphertext []byte) ([]byte, uint, error) 
 		return nil, 0, err
 	}
 
-	decrypted, err := targetRatch.Decrypt(decoded, &o.SigningKey, msg)
+	decrypted, err := targetRatch.Decrypt(decoded, msg)
 	if err != nil {
 		return nil, 0, err
 	}

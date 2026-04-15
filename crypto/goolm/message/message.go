@@ -70,6 +70,8 @@ func (r *Message) Decode(input []byte) (err error) {
 			} else if curKey == cipherTextKeyTag {
 				r.Ciphertext = value
 			}
+		} else {
+			return fmt.Errorf("Message.Decode: unexpected proto key %d", curKey)
 		}
 	}
 }

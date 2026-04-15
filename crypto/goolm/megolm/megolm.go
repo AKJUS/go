@@ -99,7 +99,7 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 
 		// how many times do we need to rehash this part?
 		// '& 0xff' ensures we handle integer wraparound correctly
-		steps := ((target >> shift) - m.Counter>>shift) & uint32(0xff)
+		steps := ((target >> shift) - (m.Counter >> shift)) & uint32(0xff)
 
 		if steps == 0 {
 			/*
@@ -177,7 +177,7 @@ func (r Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, erro
 }
 
 // Decrypt decrypts the ciphertext and verifies the MAC but not the signature.
-func (r Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey, msg *message.GroupMessage) ([]byte, error) {
+func (r Ratchet) Decrypt(ciphertext []byte, msg *message.GroupMessage) ([]byte, error) {
 	//verify mac
 	cipher, err := aessha2.NewAESSHA2(r.Data[:], megolmKeysKDFInfo)
 	if err != nil {

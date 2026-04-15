@@ -85,6 +85,8 @@ func (r *PreKeyMessage) Decode(input []byte) (err error) {
 					r.Message = value
 				}
 			}
+		} else {
+			return fmt.Errorf("PreKeyMessage.Decode: unexpected proto key %d", curKey)
 		}
 	}
 }

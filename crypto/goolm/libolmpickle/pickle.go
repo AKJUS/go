@@ -14,6 +14,9 @@ const pickleMACLength = 8
 var kdfPickle = []byte("Pickle") //used to derive the keys for encryption
 
 // Pickle encrypts the input with the key and the cipher AESSHA256. The result is then encoded in base64.
+//
+// The encryption used here is not particularly secure: both the AES key and IV are deterministic based on the pickle key.
+// However, pickles are only used locally and the key is usually hardcoded or stored next to the database anyway.
 func Pickle(key, plaintext []byte) ([]byte, error) {
 	if c, err := aessha2.NewAESSHA2(key, kdfPickle); err != nil {
 		return nil, err
