@@ -40,6 +40,7 @@ var ErrDirectMediaNotEnabled = errors.New("direct media is not enabled")
 
 var ErrPortalIsDeleted = errors.New("portal is deleted")
 var ErrPortalNotFoundInEventHandler = errors.New("portal not found to handle remote event")
+var ErrSplitPortalMigrationFailed = errors.New("failed to migrate to split portals")
 
 // Common message status errors
 var (
