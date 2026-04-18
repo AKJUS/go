@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	olmSessionPickleVersionJSON   uint8  = 1
 	olmSessionPickleVersionLibOlm uint32 = 1
 )
 
@@ -90,7 +89,10 @@ func NewOutboundOlmSession(identityKeyAlice crypto.Curve25519KeyPair, identityKe
 	secret = append(secret, baseIdSecret...)
 	secret = append(secret, baseOneTimeSecret...)
 	//Init Ratchet
-	s.Ratchet.InitializeAsAlice(secret, ratchetKey)
+	err = s.Ratchet.InitializeAsAlice(secret, ratchetKey)
+	if err != nil {
+		return nil, fmt.Errorf("ratchet initialize: %w", err)
+	}
 	s.AliceIdentityKey = identityKeyAlice.PublicKey
 	s.AliceBaseKey = baseKey.PublicKey
 	s.BobOneTimeKey = oneTimeKeyBob
@@ -160,11 +162,14 @@ func NewInboundOlmSession(identityKeyAlice *crypto.Curve25519PublicKey, received
 		return nil, fmt.Errorf("message decode: %w", err)
 	}
 
-	if len(msg.RatchetKey) == 0 {
+	if len(msg.RatchetKey) != crypto.Curve25519PublicKeyLength {
 		return nil, fmt.Errorf("message missing ratchet key: %w", olm.ErrBadMessageFormat)
 	}
 	//Init Ratchet
-	s.Ratchet.InitializeAsBob(secret, msg.RatchetKey)
+	err = s.Ratchet.InitializeAsBob(secret, msg.RatchetKey)
+	if err != nil {
+		return nil, fmt.Errorf("ratchet initialize: %w", err)
+	}
 	s.AliceBaseKey = oneTimeMsg.BaseKey
 	s.AliceIdentityKey = oneTimeMsg.IdentityKey
 	s.BobOneTimeKey = oneTimeKeyBob.Key.PublicKey
