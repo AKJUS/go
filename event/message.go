@@ -8,6 +8,7 @@ package event
 
 import (
 	"encoding/json"
+	"fmt"
 	"html"
 	"slices"
 	"strconv"
@@ -321,6 +322,8 @@ type FileInfo struct {
 	Height   int
 	Duration int
 	Size     int
+
+	Extra map[string]any
 }
 
 type serializableFileInfo struct {
@@ -353,7 +356,8 @@ func (fileInfo *FileInfo) IsZero() bool {
 		fileInfo.Width == 0 &&
 		fileInfo.Height == 0 &&
 		fileInfo.Duration == 0 &&
-		fileInfo.Size == 0
+		fileInfo.Size == 0 &&
+		len(fileInfo.Extra) == 0
 }
 
 func (sfi *serializableFileInfo) CopyFrom(fileInfo *FileInfo) *serializableFileInfo {
@@ -408,17 +412,61 @@ func (sfi *serializableFileInfo) CopyTo(fileInfo *FileInfo) {
 	}
 }
 
+func (fileInfo *FileInfo) deleteStandardExtraFields() {
+	if len(fileInfo.Extra) == 0 {
+		return
+	}
+	delete(fileInfo.Extra, "mimetype")
+	delete(fileInfo.Extra, "thumbnail_info")
+	delete(fileInfo.Extra, "thumbnail_url")
+	delete(fileInfo.Extra, "thumbnail_file")
+	delete(fileInfo.Extra, "blurhash")
+	delete(fileInfo.Extra, "xyz.amorgan.blurhash")
+	delete(fileInfo.Extra, "fi.mau.gif")
+	delete(fileInfo.Extra, "is_animated")
+	delete(fileInfo.Extra, "w")
+	delete(fileInfo.Extra, "h")
+	delete(fileInfo.Extra, "duration")
+	delete(fileInfo.Extra, "size")
+}
+
 func (fileInfo *FileInfo) UnmarshalJSON(data []byte) error {
 	sfi := &serializableFileInfo{}
 	if err := json.Unmarshal(data, sfi); err != nil {
 		return err
 	}
 	sfi.CopyTo(fileInfo)
+	if err := json.Unmarshal(data, &fileInfo.Extra); err != nil {
+		return err
+	}
+	fileInfo.deleteStandardExtraFields()
 	return nil
 }
 
 func (fileInfo *FileInfo) MarshalJSON() ([]byte, error) {
-	return json.Marshal((&serializableFileInfo{}).CopyFrom(fileInfo))
+	baseSerialized, err := json.Marshal((&serializableFileInfo{}).CopyFrom(fileInfo))
+	if len(fileInfo.Extra) == 0 || err != nil {
+		return baseSerialized, err
+	}
+	fileInfo.deleteStandardExtraFields()
+	// TODO replace this with jsonv2's extra field once jsonv2 is available
+	extra, err := json.Marshal(fileInfo.Extra)
+	if err != nil {
+		return nil, err
+	}
+	if len(baseSerialized) <= 4 || baseSerialized[0] != '{' {
+		return extra, nil
+	} else if len(extra) <= 4 || extra[0] != '{' {
+		return baseSerialized, nil
+	}
+	output := make([]byte, 0, len(baseSerialized)+len(extra)-1)
+	output = append(output, baseSerialized[:len(baseSerialized)-1]...)
+	output = append(output, ',')
+	output = append(output, extra[1:]...)
+	if !json.Valid(output) {
+		return nil, fmt.Errorf("failed to merge extra file info: %s", output)
+	}
+	return output, nil
 }
 
 func numberToInt(val json.Number) int {
