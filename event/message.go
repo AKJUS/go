@@ -323,6 +323,8 @@ type FileInfo struct {
 	Duration int
 	Size     int
 
+	BridgedSticker *BridgedSticker
+
 	Extra map[string]any
 }
 
@@ -342,6 +344,8 @@ type serializableFileInfo struct {
 	Height   json.Number `json:"h,omitempty"`
 	Duration json.Number `json:"duration,omitempty"`
 	Size     json.Number `json:"size,omitempty"`
+
+	BridgedSticker *BridgedSticker `json:"fi.mau.bridged_sticker,omitempty"`
 }
 
 func (fileInfo *FileInfo) IsZero() bool {
@@ -357,6 +361,7 @@ func (fileInfo *FileInfo) IsZero() bool {
 		fileInfo.Height == 0 &&
 		fileInfo.Duration == 0 &&
 		fileInfo.Size == 0 &&
+		fileInfo.BridgedSticker == nil &&
 		len(fileInfo.Extra) == 0
 }
 
@@ -375,6 +380,8 @@ func (sfi *serializableFileInfo) CopyFrom(fileInfo *FileInfo) *serializableFileI
 
 		Blurhash:     fileInfo.Blurhash,
 		AnoaBlurhash: fileInfo.AnoaBlurhash,
+
+		BridgedSticker: fileInfo.BridgedSticker,
 	}
 	if fileInfo.Width > 0 {
 		sfi.Width = json.Number(strconv.Itoa(fileInfo.Width))
@@ -394,17 +401,18 @@ func (sfi *serializableFileInfo) CopyFrom(fileInfo *FileInfo) *serializableFileI
 
 func (sfi *serializableFileInfo) CopyTo(fileInfo *FileInfo) {
 	*fileInfo = FileInfo{
-		Width:         numberToInt(sfi.Width),
-		Height:        numberToInt(sfi.Height),
-		Size:          numberToInt(sfi.Size),
-		Duration:      numberToInt(sfi.Duration),
-		MimeType:      sfi.MimeType,
-		ThumbnailURL:  sfi.ThumbnailURL,
-		ThumbnailFile: sfi.ThumbnailFile,
-		MauGIF:        sfi.MauGIF,
-		IsAnimated:    sfi.IsAnimated,
-		Blurhash:      sfi.Blurhash,
-		AnoaBlurhash:  sfi.AnoaBlurhash,
+		Width:          numberToInt(sfi.Width),
+		Height:         numberToInt(sfi.Height),
+		Size:           numberToInt(sfi.Size),
+		Duration:       numberToInt(sfi.Duration),
+		MimeType:       sfi.MimeType,
+		ThumbnailURL:   sfi.ThumbnailURL,
+		ThumbnailFile:  sfi.ThumbnailFile,
+		MauGIF:         sfi.MauGIF,
+		IsAnimated:     sfi.IsAnimated,
+		Blurhash:       sfi.Blurhash,
+		AnoaBlurhash:   sfi.AnoaBlurhash,
+		BridgedSticker: sfi.BridgedSticker,
 	}
 	if sfi.ThumbnailInfo != nil {
 		fileInfo.ThumbnailInfo = &FileInfo{}
@@ -428,6 +436,7 @@ func (fileInfo *FileInfo) deleteStandardExtraFields() {
 	delete(fileInfo.Extra, "h")
 	delete(fileInfo.Extra, "duration")
 	delete(fileInfo.Extra, "size")
+	delete(fileInfo.Extra, "fi.mau.bridged_sticker")
 }
 
 func (fileInfo *FileInfo) UnmarshalJSON(data []byte) error {

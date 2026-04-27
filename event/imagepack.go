@@ -28,10 +28,12 @@ type ImagePackMetadata struct {
 	AvatarURL   id.ContentURIString `json:"avatar_url,omitempty"`
 	Usage       []ImagePackUsage    `json:"usage,omitempty"`
 	Attribution string              `json:"attribution,omitempty"`
+
+	BridgedPack *BridgedStickerPack `json:"fi.mau.bridged_pack,omitempty"`
 }
 
 func (ipm ImagePackMetadata) IsZero() bool {
-	return ipm.DisplayName == "" && ipm.AvatarURL == "" && len(ipm.Usage) == 0 && ipm.Attribution == ""
+	return ipm.DisplayName == "" && ipm.AvatarURL == "" && len(ipm.Usage) == 0 && ipm.Attribution == "" && ipm.BridgedPack == nil
 }
 
 type ImagePackEventContent struct {
@@ -48,4 +50,16 @@ type StickerSource struct {
 	Via       []string  `json:"via,omitempty"`
 	StateKey  string    `json:"state_key"`
 	Shortcode string    `json:"shortcode"`
+}
+
+type BridgedStickerPack struct {
+	Network string `json:"network"`
+	URL     string `json:"url"`
+}
+
+type BridgedSticker struct {
+	Network string `json:"network"`
+	ID      string `json:"id"`
+	Emoji   string `json:"emoji,omitempty"`
+	PackURL string `json:"pack_url"`
 }
