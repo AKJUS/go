@@ -42,3 +42,10 @@ type ImagePackEventContent struct {
 type ImagePackRoomsEventContent struct {
 	Rooms map[id.RoomID]map[string]struct{} `json:"rooms"`
 }
+
+type StickerSource struct {
+	RoomID    id.RoomID `json:"room_id"`
+	Via       []string  `json:"via,omitempty"`
+	StateKey  string    `json:"state_key"`
+	Shortcode string    `json:"shortcode"`
+}
