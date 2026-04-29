@@ -3938,7 +3938,9 @@ func (portal *Portal) handleRemoteChatDelete(ctx context.Context, source *UserLo
 		log.Err(err).Msg("Failed to delete portal from database")
 		return EventHandlingResultFailed.WithError(err)
 	}
-	err = portal.Bridge.Bot.DeleteRoom(ctx, portal.MXID, false)
+	// The event context has likely been canceled by delete, so use a background context for the delete call
+	noCancelCtx := log.WithContext(portal.Bridge.BackgroundCtx)
+	err = portal.Bridge.Bot.DeleteRoom(noCancelCtx, portal.MXID, false)
 	if err != nil {
 		log.Err(err).Msg("Failed to delete Matrix room")
 		return EventHandlingResultFailed.WithError(err)
