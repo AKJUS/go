@@ -4098,9 +4098,6 @@ func (plc *PowerLevelOverrides) Apply(actor id.UserID, content *event.PowerLevel
 	if plc == nil || content == nil {
 		return
 	}
-	for evtType, level := range plc.Events {
-		changed = content.EnsureEventLevelAs(actor, evtType, level) || changed
-	}
 	var actorLevel int
 	if actor != "" {
 		actorLevel = content.GetUserLevel(actor)
@@ -4134,6 +4131,9 @@ func (plc *PowerLevelOverrides) Apply(actor id.UserID, content *event.PowerLevel
 	if allowChange(plc.Redact, content.Redact(), actorLevel) {
 		changed = true
 		content.RedactPtr = plc.Redact
+	}
+	for evtType, level := range plc.Events {
+		changed = content.EnsureEventLevelAs(actor, evtType, level) || changed
 	}
 	if plc.Custom != nil {
 		changed = plc.Custom(content) || changed
