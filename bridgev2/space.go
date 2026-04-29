@@ -15,6 +15,7 @@ import (
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/bridgev2/database"
+	"maunium.net/go/mautrix/bridgev2/networkid"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 )
@@ -178,6 +179,10 @@ func (ul *UserLogin) GetSpaceRoom(ctx context.Context) (id.RoomID, error) {
 			},
 		},
 		Invite: []id.UserID{ul.UserMXID},
+		BeeperLocalRoomID: ul.Bridge.Matrix.GenerateDeterministicRoomID(networkid.PortalKey{
+			ID:       "__personal_filtering_space__",
+			Receiver: ul.ID,
+		}),
 	}
 	if autoJoin {
 		req.BeeperInitialMembers = []id.UserID{ul.UserMXID}
