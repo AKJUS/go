@@ -1060,6 +1060,22 @@ type PushParsingNetwork interface {
 	ParsePushNotification(ctx context.Context, data json.RawMessage) (networkid.UserLoginID, any, error)
 }
 
+type ImportedImagePack struct {
+	// The main content of the converted image pack
+	Content *event.ImagePackEventContent
+	// Extra top-level content
+	Extra map[string]any
+	// A unique identifier (within the network) for the image pack, used as the state key.
+	// If unset, falls back to Content.Metadata.BridgedPack.URL
+	Shortcode string
+}
+
+type StickerImportingNetworkAPI interface {
+	NetworkAPI
+
+	DownloadImagePack(ctx context.Context, url string) (*ImportedImagePack, error)
+}
+
 type RemoteEventType int
 
 func (ret RemoteEventType) String() string {

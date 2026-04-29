@@ -48,6 +48,7 @@ func NewProcessor(bridge *bridgev2.Bridge) bridgev2.CommandProcessor {
 		CommandResolveIdentifier, CommandStartChat, CommandCreateGroup, CommandSearch, CommandCreatePortal,
 		CommandID, CommandUnbridge, CommandBridge, CommandSyncChat, CommandMute, CommandDeleteChat, CommandFilter,
 		CommandSudo, CommandDoIn,
+		CommandImportImagePack,
 	)
 	return proc
 }

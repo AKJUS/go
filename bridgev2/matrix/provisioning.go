@@ -127,6 +127,8 @@ func (prov *ProvisioningAPI) Init() {
 	prov.Router.HandleFunc("POST /v3/create_dm/{identifier}", prov.PostCreateDM)
 	prov.Router.HandleFunc("POST /v3/create_group/{type}", prov.PostCreateGroup)
 	prov.Router.HandleFunc("POST /v3/backfill/{roomID}", prov.PostPaginate)
+	prov.Router.HandleFunc("GET /v3/image_pack/import", prov.ImportImagePack)
+	prov.Router.HandleFunc("POST /v3/image_pack/import", prov.ImportImagePack)
 
 	if prov.br.Config.Provisioning.EnableSessionTransfers {
 		prov.log.Debug().Msg("Enabling session transfer API")
@@ -767,6 +769,19 @@ func (prov *ProvisioningAPI) PostPaginate(w http.ResponseWriter, r *http.Request
 			log.Warn().Msg("Request cancelled while waiting for backfill to complete")
 		}
 	}
+}
+
+func (prov *ProvisioningAPI) ImportImagePack(w http.ResponseWriter, r *http.Request) {
+	login := prov.GetLoginForRequest(w, r)
+	if login == nil {
+		return
+	}
+	resp, err := provisionutil.ImportImagePack(r.Context(), login, r.URL.Query().Get("pack_url"), r.Method == http.MethodPost)
+	if err != nil {
+		RespondWithError(w, err, "Internal error importing image pack")
+		return
+	}
+	exhttp.WriteJSONResponse(w, http.StatusOK, resp)
 }
 
 type ReqExportCredentials struct {

@@ -30,6 +30,7 @@ var (
 	HelpSectionGeneral = HelpSection{"General", 0}
 	HelpSectionAuth    = HelpSection{"Authentication", 10}
 	HelpSectionChats   = HelpSection{"Starting and managing chats", 20}
+	HelpSectionMisc    = HelpSection{"Miscellaneous", 30}
 	HelpSectionAdmin   = HelpSection{"Administration", 50}
 )
 
