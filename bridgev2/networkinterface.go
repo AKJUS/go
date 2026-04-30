@@ -1074,6 +1074,7 @@ type StickerImportingNetworkAPI interface {
 	NetworkAPI
 
 	DownloadImagePack(ctx context.Context, url string) (*ImportedImagePack, error)
+	ListImagePacks(ctx context.Context) ([]*event.ImagePackMetadata, error)
 }
 
 type RemoteEventType int
