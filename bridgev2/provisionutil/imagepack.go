@@ -67,3 +67,11 @@ func ImportImagePack(ctx context.Context, login *bridgev2.UserLogin, packURL str
 	}
 	return evtContent, nil
 }
+
+func ListImagePacks(ctx context.Context, login *bridgev2.UserLogin) ([]*event.ImagePackMetadata, error) {
+	api, ok := login.Client.(bridgev2.StickerImportingNetworkAPI)
+	if !ok {
+		return nil, bridgev2.RespError(mautrix.MUnrecognized.WithMessage("This bridge does not support importing image packs"))
+	}
+	return api.ListImagePacks(ctx)
+}
