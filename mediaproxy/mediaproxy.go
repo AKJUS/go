@@ -7,6 +7,7 @@
 package mediaproxy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -75,6 +76,14 @@ func (d *GetMediaResponseData) GetContentType() string {
 
 func (d *GetMediaResponseData) GetContentLength() int64 {
 	return d.ContentLength
+}
+
+func GetMediaResponseRawData(data []byte) *GetMediaResponseData {
+	return &GetMediaResponseData{
+		Reader:        io.NopCloser(bytes.NewReader(data)),
+		ContentType:   http.DetectContentType(data),
+		ContentLength: int64(len(data)),
+	}
 }
 
 type GetMediaResponseCallback struct {
