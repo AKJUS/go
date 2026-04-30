@@ -832,6 +832,7 @@ type PersonalFilteringCustomizingNetworkAPI interface {
 type ProvisioningCapabilities struct {
 	ResolveIdentifier ResolveIdentifierCapabilities    `json:"resolve_identifier"`
 	GroupCreation     map[string]GroupTypeCapabilities `json:"group_creation"`
+	ImagePackImport   bool                             `json:"image_pack_import,omitempty"`
 }
 
 type ResolveIdentifierCapabilities struct {
