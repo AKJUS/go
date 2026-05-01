@@ -27,6 +27,7 @@ import (
 
 type Client struct {
 	HTTP       *http.Client
+	ExtHTTP    *http.Client
 	ServerName string
 	UserAgent  string
 	Key        *SigningKey
@@ -43,6 +44,9 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache) *Clien
 				// Federation requests do not allow redirects.
 				return http.ErrUseLastResponse
 			},
+		},
+		ExtHTTP: &http.Client{
+			Timeout: 120 * time.Second,
 		},
 		UserAgent:  mautrix.DefaultUserAgent,
 		ServerName: serverName,
