@@ -8,6 +8,7 @@ package federation_test
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,4 +29,14 @@ func TestServerKeyResponse_VerifySelfSignature(t *testing.T) {
 			assert.NoError(t, resp.VerifySelfSignature())
 		})
 	}
+}
+
+func TestServerKeyResponse_FailWithFilter(t *testing.T) {
+	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
+	cli.DNSFilter = func(ips []net.IP) []net.IP {
+		return []net.IP{}
+	}
+	ctx := context.Background()
+	_, err := cli.ServerKeys(ctx, "matrix.org")
+	assert.ErrorContains(t, err, "no such host")
 }

@@ -31,6 +31,7 @@ import (
 type Client struct {
 	HTTP       *http.Client
 	ExtHTTP    *http.Client
+	Dialer     *net.Dialer
 	DNS        *net.Resolver
 	DNSFilter  func([]net.IP) []net.IP
 	ServerName string
@@ -52,6 +53,7 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSe
 			},
 		},
 		ExtHTTP:    httpSettings.WithDial(dialer.DialContext).Compile(),
+		Dialer:     dialer,
 		UserAgent:  mautrix.DefaultUserAgent,
 		ServerName: serverName,
 		Key:        key,
