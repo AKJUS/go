@@ -107,12 +107,7 @@ func (prov *ProvisioningAPI) Init() {
 	prov.sessionTransfers = make(map[networkid.UserLoginID]struct{})
 	prov.net = prov.br.Bridge.Network
 	prov.log = prov.br.Log.With().Str("component", "provisioning").Logger()
-	prov.fedClient = federation.NewClient("", nil, nil)
-	prov.fedClient.HTTP.Timeout = 20 * time.Second
-	tp := prov.fedClient.HTTP.Transport.(*federation.ServerResolvingTransport)
-	tp.Dialer.Timeout = 10 * time.Second
-	tp.Transport.ResponseHeaderTimeout = 10 * time.Second
-	tp.Transport.TLSHandshakeTimeout = 10 * time.Second
+	prov.fedClient = federation.NewClient("", nil, nil, exhttp.SensibleClientSettings.WithGlobalTimeout(20*time.Second))
 	prov.Router = http.NewServeMux()
 	prov.Router.HandleFunc("GET /v3/whoami", prov.GetWhoami)
 	prov.Router.HandleFunc("GET /v3/capabilities", prov.GetCapabilities)

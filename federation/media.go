@@ -92,13 +92,7 @@ func (c *Client) DownloadMedia(ctx context.Context, serverName, mediaID string) 
 	}, nil
 }
 
-var EnableMediaDownloadRedirects = false
-
 func (c *Client) downloadMediaRedirect(ctx context.Context, url string) (io.ReadCloser, error) {
-	// TODO remove this option after there's an IP blacklist for SSRF protection
-	if !EnableMediaDownloadRedirects {
-		return nil, fmt.Errorf("media download redirects are disabled")
-	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare redirect request: %w", err)

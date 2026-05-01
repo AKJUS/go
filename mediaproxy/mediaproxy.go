@@ -212,7 +212,7 @@ func (mp *MediaProxy) EnableServerAuth(client *federation.Client, keyCache feder
 	}
 	if client == nil {
 		resCache, _ := keyCache.(federation.ResolutionCache)
-		client = federation.NewClient(mp.serverName, mp.serverKey, resCache)
+		client = federation.NewClient(mp.serverName, mp.serverKey, resCache, exhttp.SensibleClientSettings)
 	}
 	mp.ServerAuth = federation.NewServerAuth(client, keyCache, func(auth federation.XMatrixAuth) string {
 		return mp.GetServerName()

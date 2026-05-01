@@ -12,11 +12,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
+	"go.mau.fi/customresolver"
+	"go.mau.fi/util/exhttp"
 	"go.mau.fi/util/exslices"
 	"go.mau.fi/util/jsontime"
 
@@ -28,6 +31,8 @@ import (
 type Client struct {
 	HTTP       *http.Client
 	ExtHTTP    *http.Client
+	DNS        *net.Resolver
+	DNSFilter  func([]net.IP) []net.IP
 	ServerName string
 	UserAgent  string
 	Key        *SigningKey
@@ -35,25 +40,28 @@ type Client struct {
 	ResponseSizeLimit int64
 }
 
-func NewClient(serverName string, key *SigningKey, cache ResolutionCache) *Client {
-	return &Client{
+func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSettings exhttp.ClientSettings) *Client {
+	dialer := &net.Dialer{Timeout: httpSettings.DialTimeout}
+	c := &Client{
 		HTTP: &http.Client{
-			Transport: NewServerResolvingTransport(cache),
-			Timeout:   120 * time.Second,
+			Transport: NewServerResolvingTransport(cache, dialer.DialContext, httpSettings),
+			Timeout:   httpSettings.GlobalTimeout,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				// Federation requests do not allow redirects.
 				return http.ErrUseLastResponse
 			},
 		},
-		ExtHTTP: &http.Client{
-			Timeout: 120 * time.Second,
-		},
+		ExtHTTP:    httpSettings.WithDial(dialer.DialContext).Compile(),
 		UserAgent:  mautrix.DefaultUserAgent,
 		ServerName: serverName,
 		Key:        key,
+		DNS:        net.DefaultResolver,
+		DNSFilter:  DefaultDNSFilter,
 
 		ResponseSizeLimit: mautrix.DefaultResponseSizeLimit,
 	}
+	dialer.Resolver = customresolver.New(c.dnsResolve)
+	return c
 }
 
 func (c *Client) Version(ctx context.Context, serverName string) (resp *RespServerVersion, err error) {

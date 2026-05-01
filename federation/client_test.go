@@ -11,12 +11,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.mau.fi/util/exhttp"
 
 	"maunium.net/go/mautrix/federation"
 )
 
 func TestClient_Version(t *testing.T) {
-	cli := federation.NewClient("", nil, nil)
+	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
+	cli.DNSFilter = federation.NoopDNSFilter
 	resp, err := cli.Version(context.TODO(), "maunium.net")
 	require.NoError(t, err)
 	require.Equal(t, "Synapse", resp.Server.Name)

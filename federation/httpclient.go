@@ -11,7 +11,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
+
+	"go.mau.fi/util/exhttp"
 )
 
 // ServerResolvingTransport is an http.RoundTripper that resolves Matrix server names before sending requests.
@@ -19,7 +22,7 @@ import (
 type ServerResolvingTransport struct {
 	ResolveOpts *ResolveServerNameOpts
 	Transport   *http.Transport
-	Dialer      *net.Dialer
+	DialFunc    exhttp.DialerFunc
 
 	cache ResolutionCache
 
@@ -27,18 +30,16 @@ type ServerResolvingTransport struct {
 	resolveLocksLock sync.Mutex
 }
 
-func NewServerResolvingTransport(cache ResolutionCache) *ServerResolvingTransport {
+func NewServerResolvingTransport(cache ResolutionCache, dialer exhttp.DialerFunc, settings exhttp.ClientSettings) *ServerResolvingTransport {
 	if cache == nil {
 		cache = NewInMemoryCache()
 	}
 	srt := &ServerResolvingTransport{
 		resolveLocks: make(map[string]*sync.Mutex),
 		cache:        cache,
-		Dialer:       &net.Dialer{},
+		DialFunc:     dialer,
 	}
-	srt.Transport = &http.Transport{
-		DialContext: srt.DialContext,
-	}
+	srt.Transport = settings.WithDial(srt.DialContext).Configure(&http.Transport{})
 	return srt
 }
 
@@ -49,7 +50,7 @@ func (srt *ServerResolvingTransport) DialContext(ctx context.Context, network, a
 	if !ok {
 		return nil, fmt.Errorf("no IP:port in context")
 	}
-	return srt.Dialer.DialContext(ctx, network, addrs[0])
+	return srt.DialFunc(ctx, network, addrs[0])
 }
 
 func (srt *ServerResolvingTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -89,4 +90,22 @@ func (srt *ServerResolvingTransport) resolve(ctx context.Context, serverName str
 		srt.cache.StoreResolution(res)
 		return res, nil
 	}
+}
+
+func NoopDNSFilter(ips []net.IP) []net.IP {
+	return ips
+}
+
+func DefaultDNSFilter(ips []net.IP) []net.IP {
+	return slices.DeleteFunc(ips, func(ip net.IP) bool {
+		return ip.IsPrivate() || ip.IsLoopback()
+	})
+}
+
+func (c *Client) dnsResolve(ctx context.Context, network, host string) ([]net.IP, error) {
+	results, err := c.DNS.LookupIP(ctx, network, host)
+	if err != nil {
+		return nil, err
+	}
+	return c.DNSFilter(results), nil
 }
