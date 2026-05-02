@@ -20,7 +20,7 @@ import (
 
 func TestServerKeyResponse_VerifySelfSignature(t *testing.T) {
 	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
-	cli.DNSFilter = federation.NoopDNSFilter
+	cli.AllowIP = federation.AllowAllIP
 	ctx := context.Background()
 	for _, name := range []string{"matrix.org", "maunium.net", "cd.mau.dev", "uwu.mau.dev"} {
 		t.Run(name, func(t *testing.T) {
@@ -33,10 +33,10 @@ func TestServerKeyResponse_VerifySelfSignature(t *testing.T) {
 
 func TestServerKeyResponse_FailWithFilter(t *testing.T) {
 	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
-	cli.DNSFilter = func(ips []net.IP) []net.IP {
-		return []net.IP{}
+	cli.AllowIP = func(ip net.IP) bool {
+		return false
 	}
 	ctx := context.Background()
 	_, err := cli.ServerKeys(ctx, "matrix.org")
-	assert.ErrorContains(t, err, "no such host")
+	assert.ErrorIs(t, err, federation.ErrIPFiltered)
 }

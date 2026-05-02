@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"time"
 
-	"go.mau.fi/customresolver"
 	"go.mau.fi/util/exhttp"
 	"go.mau.fi/util/exslices"
 	"go.mau.fi/util/jsontime"
@@ -32,8 +31,7 @@ type Client struct {
 	HTTP       *http.Client
 	ExtHTTP    *http.Client
 	Dialer     *net.Dialer
-	DNS        *net.Resolver
-	DNSFilter  func([]net.IP) []net.IP
+	AllowIP    func(net.IP) bool
 	ServerName string
 	UserAgent  string
 	Key        *SigningKey
@@ -57,8 +55,7 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSe
 		UserAgent:  mautrix.DefaultUserAgent,
 		ServerName: serverName,
 		Key:        key,
-		DNS:        net.DefaultResolver,
-		DNSFilter:  DefaultDNSFilter,
+		AllowIP:    DefaultAllowIP,
 
 		ResponseSizeLimit: mautrix.DefaultResponseSizeLimit,
 	}
@@ -70,7 +67,7 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSe
 		}
 		return nil
 	}
-	dialer.Resolver = customresolver.New(c.dnsResolve)
+	dialer.ControlContext = c.controlConn
 	return c
 }
 

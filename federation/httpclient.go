@@ -8,11 +8,12 @@ package federation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
-	"slices"
 	"sync"
+	"syscall"
 
 	"go.mau.fi/util/exhttp"
 )
@@ -92,20 +93,32 @@ func (srt *ServerResolvingTransport) resolve(ctx context.Context, serverName str
 	}
 }
 
-func NoopDNSFilter(ips []net.IP) []net.IP {
-	return ips
+func AllowAllIP(ip net.IP) bool {
+	return true
 }
 
-func DefaultDNSFilter(ips []net.IP) []net.IP {
-	return slices.DeleteFunc(ips, func(ip net.IP) bool {
-		return ip.IsPrivate() || ip.IsLoopback()
-	})
+func DefaultAllowIP(ip net.IP) bool {
+	return !ip.IsPrivate() && !ip.IsLoopback()
 }
 
-func (c *Client) dnsResolve(ctx context.Context, network, host string) ([]net.IP, error) {
-	results, err := c.DNS.LookupIP(ctx, network, host)
-	if err != nil {
-		return nil, err
+var ErrIPFiltered = errors.New("refusing to connect")
+
+func (c *Client) controlConn(_ context.Context, network, address string, _ syscall.RawConn) error {
+	switch network {
+	case "tcp4", "tcp6":
+		// ok
+	default:
+		return fmt.Errorf("unsupported network: %s", network)
 	}
-	return c.DNSFilter(results), nil
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("invalid address %q: %w", address, err)
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("invalid IP address %q", host)
+	} else if c.AllowIP != nil && !c.AllowIP(ip) {
+		return fmt.Errorf("%w to %s", ErrIPFiltered, host)
+	}
+	return nil
 }
