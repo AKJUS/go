@@ -16,6 +16,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+
+	"maunium.net/go/mautrix"
 )
 
 type FileMetadata struct {
@@ -84,8 +86,8 @@ func (c *Client) DownloadMedia(ctx context.Context, serverName, mediaID string) 
 	}
 	redir := part.Header.Get("Location")
 	if redir != "" {
-		_ = part.Close()
 		_ = resp.Body.Close()
+		_ = part.Close()
 		data, meta.Header, err = c.downloadMediaRedirect(ctx, redir)
 		return
 	}
@@ -105,10 +107,19 @@ func (c *Client) downloadMediaRedirect(ctx context.Context, url string) (io.Read
 	}
 	resp, err := c.ExtHTTP.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to send redirect request: %w", err)
+		return nil, nil, mautrix.HTTPError{
+			Request:  req,
+			Response: resp,
+
+			Message:      "media redirect request error",
+			WrappedError: err,
+		}
 	} else if resp.StatusCode != http.StatusOK {
 		_ = resp.Body.Close()
-		return nil, nil, fmt.Errorf("unexpected status code from redirect: %d", resp.StatusCode)
+		return nil, nil, fmt.Errorf("unexpected status code from redirect: %w", mautrix.HTTPError{
+			Request:  req,
+			Response: resp,
+		})
 	}
 	return resp.Body, resp.Header, nil
 }
