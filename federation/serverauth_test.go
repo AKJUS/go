@@ -20,7 +20,7 @@ import (
 
 func TestServerKeyResponse_VerifySelfSignature(t *testing.T) {
 	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
-	cli.AllowIP = federation.AllowAllIP
+	cli.AllowIP = nil
 	ctx := context.Background()
 	for _, name := range []string{"matrix.org", "maunium.net", "cd.mau.dev", "uwu.mau.dev"} {
 		t.Run(name, func(t *testing.T) {

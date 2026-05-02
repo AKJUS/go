@@ -18,7 +18,7 @@ import (
 
 func TestClient_Version(t *testing.T) {
 	cli := federation.NewClient("", nil, nil, exhttp.SensibleClientSettings)
-	cli.AllowIP = federation.AllowAllIP
+	cli.AllowIP = nil
 	resp, err := cli.Version(context.TODO(), "maunium.net")
 	require.NoError(t, err)
 	require.Equal(t, "Synapse", resp.Server.Name)

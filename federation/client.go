@@ -71,6 +71,10 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSe
 	return c
 }
 
+func DefaultAllowIP(ip net.IP) bool {
+	return ip.IsGlobalUnicast() && !ip.IsPrivate() && !ip.IsLinkLocalMulticast()
+}
+
 func (c *Client) Version(ctx context.Context, serverName string) (resp *RespServerVersion, err error) {
 	err = c.MakeRequest(ctx, serverName, false, http.MethodGet, URLPath{"v1", "version"}, nil, &resp)
 	return

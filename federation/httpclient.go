@@ -93,14 +93,6 @@ func (srt *ServerResolvingTransport) resolve(ctx context.Context, serverName str
 	}
 }
 
-func AllowAllIP(ip net.IP) bool {
-	return true
-}
-
-func DefaultAllowIP(ip net.IP) bool {
-	return !ip.IsPrivate() && !ip.IsLoopback()
-}
-
 var ErrIPFiltered = errors.New("refusing to connect")
 
 func (c *Client) controlConn(_ context.Context, network, address string, _ syscall.RawConn) error {
