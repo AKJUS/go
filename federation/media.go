@@ -100,6 +100,8 @@ func (c *Client) downloadMediaRedirect(ctx context.Context, url string) (io.Read
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to prepare redirect request: %w", err)
+	} else if req.URL.Scheme != "https" {
+		return nil, nil, fmt.Errorf("non-https URL in redirect")
 	}
 	resp, err := c.ExtHTTP.Do(req)
 	if err != nil {

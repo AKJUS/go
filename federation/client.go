@@ -62,6 +62,14 @@ func NewClient(serverName string, key *SigningKey, cache ResolutionCache, httpSe
 
 		ResponseSizeLimit: mautrix.DefaultResponseSizeLimit,
 	}
+	c.ExtHTTP.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		// External requests (like media download redirects) can redirect further themselves,
+		// but only allow secure URLs.
+		if req.URL.Scheme != "https" {
+			return fmt.Errorf("attempted to redirect to non-https URL")
+		}
+		return nil
+	}
 	dialer.Resolver = customresolver.New(c.dnsResolve)
 	return c
 }
