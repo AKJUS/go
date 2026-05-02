@@ -19,7 +19,10 @@ import (
 )
 
 type FileMetadata struct {
-	// nothing here yet
+	// Header contains the multipart or HTTP response headers for the file.
+	// This is not parsed from the JSON metadata.
+	Header http.Header `json:"-"`
+	// JSON-parsed fields will be added once some are defined in the spec.
 }
 
 type mediaPartReader struct {
@@ -83,26 +86,27 @@ func (c *Client) DownloadMedia(ctx context.Context, serverName, mediaID string) 
 	if redir != "" {
 		_ = part.Close()
 		_ = resp.Body.Close()
-		data, err = c.downloadMediaRedirect(ctx, redir)
+		data, meta.Header, err = c.downloadMediaRedirect(ctx, redir)
 		return
 	}
+	meta.Header = http.Header(part.Header)
 	return meta, &mediaPartReader{
 		respBody: resp.Body,
 		part:     part,
 	}, nil
 }
 
-func (c *Client) downloadMediaRedirect(ctx context.Context, url string) (io.ReadCloser, error) {
+func (c *Client) downloadMediaRedirect(ctx context.Context, url string) (io.ReadCloser, http.Header, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare redirect request: %w", err)
+		return nil, nil, fmt.Errorf("failed to prepare redirect request: %w", err)
 	}
 	resp, err := c.ExtHTTP.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send redirect request: %w", err)
+		return nil, nil, fmt.Errorf("failed to send redirect request: %w", err)
 	} else if resp.StatusCode != http.StatusOK {
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code from redirect: %d", resp.StatusCode)
+		return nil, nil, fmt.Errorf("unexpected status code from redirect: %d", resp.StatusCode)
 	}
-	return resp.Body, nil
+	return resp.Body, resp.Header, nil
 }
